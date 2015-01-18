@@ -46,8 +46,8 @@ if __name__ == '__main__':
     os.path.walk(DOCS_DIR, find_index_files, new_indexfiles)
     new_indexfiles = filter(lambda x: x not in index_files, new_indexfiles)
     for ifile in new_indexfiles:
-        title = raw_input("Found new file: {} \
-                          Enter a title [blank to ignore]: ".format(ifile))
+        title = raw_input("Found new file: {} \n"
+                          "Enter a title [blank to ignore]: ".format(ifile))
         title = title.strip()
         if title:
             config.add_section(title)
