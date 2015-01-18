@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+# simple script to generate an html file which indexes
+# all of my offline documentation folders
+
+import os
+import re
+import codecs
+
+from ConfigParser import SafeConfigParser
+
+from bs4 import BeautifulSoup as bs
+from os.path import abspath, join
+from jinja2 import FileSystemLoader, Environment
+
+
+CONFIG_PATH = '/home/mooja/.config/docindex/config.ini'
+DOCS_DIR = '/home/mooja/docs/'
+INDEX_FILE = '/home/mooja/docs/index.html'
+TEMPLATE_PATH = "/home/mooja/.docindex/template.html"
+
+
+def find_index_files(index_files, dirname, names):
+    if os.path.normpath(abspath(os.path.dirname(dirname))) == os.path.normpath(DOCS_DIR):
+        for name in names:
+            abs_name = abspath(join(dirname, name))
+            m = re.match(r'^index.html$', name)
+            if m:
+                index_files.append(abs_name.decode(encoding='utf-8'))
+
+
+if __name__ == '__main__':
+    index_files, titles = [], []
+    os.path.walk(abspath(DOCS_DIR), find_index_files, index_files)
+
+    for (i, index_file) in enumerate(index_files):
+        title = bs(codecs.open(index_file, encoding='utf-8').read()).title.string
+        title = re.sub(r'documentation', '', title, re.I)
+        title = re.sub(r'(^\D+)\d.+', r'\1', title, re.I) # remove version
+        title = re.sub(r'(^.+):.+', r'\1', title, re.I) # remove stuff after the colon
+        titles.append(title)
+
+    template_env = Environment(loader=FileSystemLoader('/home/mooja/.config/docindex'))
+    t = template_env.get_template('template.html')
+    output = t.render(indexes=zip(titles, index_files))
+    with codecs.open(INDEX_FILE, 'w', encoding='utf-8') as f:
+        f.write(output)
