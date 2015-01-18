@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+#######################################################################
+# sorts lines by their length                                         #
+# removes blank lines                                                 #
+# useful for sorting python and haskell module imports                #
+#######################################################################
+
+
+import sys
+import fileinput
+
+
+def cmplen(a, b):
+    return cmp(len(a), len(b))
+
+if __name__ == '__main__':
+    lines = [line for line in fileinput.input()]
+    lines = filter(bool, lines)
+    lines.sort(cmplen)
+
+    sys.stdout.writelines(lines)
