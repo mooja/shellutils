@@ -10,8 +10,7 @@ import codecs
 
 from ConfigParser import SafeConfigParser
 
-from bs4 import BeautifulSoup as bs
-from os.path import abspath, join
+from os.path import abspath, join, expanduser
 from jinja2 import FileSystemLoader, Environment
 
 
@@ -26,20 +25,37 @@ def find_index_files(index_files, dirname, names):
         for name in names:
             abs_name = abspath(join(dirname, name))
             m = re.match(r'^index.html$', name)
-            if m:
+            if m and abs_name != INDEX_FILE:
                 index_files.append(abs_name.decode(encoding='utf-8'))
 
 
 if __name__ == '__main__':
-    index_files, titles = [], []
-    os.path.walk(abspath(DOCS_DIR), find_index_files, index_files)
+    config = SafeConfigParser()
+    config.read(CONFIG_PATH)
 
-    for (i, index_file) in enumerate(index_files):
-        title = bs(codecs.open(index_file, encoding='utf-8').read()).title.string
-        title = re.sub(r'documentation', '', title, re.I)
-        title = re.sub(r'(^\D+)\d.+', r'\1', title, re.I) # remove version
-        title = re.sub(r'(^.+):.+', r'\1', title, re.I) # remove stuff after the colon
-        titles.append(title)
+    index_files = [config.get(section, 'file')
+        for section in config.sections()]
+    titles = [config.get(section, 'title')
+        for section in config.sections()]
+
+    # expand ~
+    index_files = map(expanduser, index_files)
+
+    # scan the ~/docs/ directory for index.html files not in database
+    new_indexfiles = []
+    os.path.walk(DOCS_DIR, find_index_files, new_indexfiles)
+    new_indexfiles = filter(lambda x: x not in index_files, new_indexfiles)
+    for ifile in new_indexfiles:
+        title = raw_input("Found new file: {} \
+                          Enter a title [blank to ignore]: ".format(ifile))
+        title = title.strip()
+        if title:
+            config.add_section(title)
+            config.set(title, 'file', ifile)
+            config.set(title, 'title', title)
+            config.write(open(CONFIG_PATH, 'w'))
+            index_files.append(ifile)
+            titles.append(title)
 
     template_env = Environment(loader=FileSystemLoader('/home/mooja/.config/docindex'))
     t = template_env.get_template('template.html')
